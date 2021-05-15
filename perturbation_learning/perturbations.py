@@ -19,9 +19,9 @@ def rotation(config):
 def _rotation(config): 
     return lambda x: rotation(x[0],config)
 
-def pair_rotation(config):
+def pair_rotation(x, config):
     np.random.seed(0)
-    degree = (np.rand() - 0.5) * (config.degree * 2)
+    degree = (np.random.rand() - 0.5) * (config.degree * 2)
     t = transforms.Compose([
         transforms.ToPILImage(), 
         TF.rotate(degree), 
@@ -34,7 +34,10 @@ def pair_rotation(config):
         ])
     part1 = torch.cat([t(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
     part2 = torch.cat([t2(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
-    return torch.cat([part1, part2], dim=0).unsqueeze(1)    
+    res = torch.cat([part1, part2], dim=0).unsqueeze(1)
+    print("part1: ", part1.shape)
+    print("res: ", res.shape)
+    return res
 def _pair_rotation(config):
     return lambda x: pair_rotation(x[0], config)
 

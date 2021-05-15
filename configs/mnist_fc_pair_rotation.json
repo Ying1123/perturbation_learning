@@ -1,7 +1,7 @@
   
 {
   "model": {
-      "model_dir":"mnist_fc_linf",
+      "model_dir":"mnist_fc_pair_rotation",
       "type": "mnist_fc", 
       "output_distribution": "bernoulli"
   }, 
