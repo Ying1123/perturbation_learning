@@ -1,5 +1,7 @@
 import torch
 from torchvision import transforms
+import torchvision.transforms.functional as TF
+import numpy as np
 
 def linfinity(x, config): 
     d = torch.zeros_like(x).uniform_(-config.epsilon, config.epsilon)
@@ -17,6 +19,25 @@ def rotation(config):
 def _rotation(config): 
     return lambda x: rotation(x[0],config)
 
+def pair_rotation(config):
+    np.random.seed(0)
+    degree = (np.rand() - 0.5) * (config.degree * 2)
+    t = transforms.Compose([
+        transforms.ToPILImage(), 
+        TF.rotate(degree), 
+        transforms.ToTensor()
+        ])
+    t2 = transforms.Compose([
+        transforms.ToPILImage(), 
+        TF.rotate(degree * 2.), 
+        transforms.ToTensor()
+        ])
+    part1 = torch.cat([t(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
+    part2 = torch.cat([t2(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
+    return torch.cat([part1, part2], dim=0).unsqueeze(1)    
+def _pair_rotation(config):
+    return lambda x: pair_rotation(x[0], config)
+
 def rts(x, config): 
     t = transforms.Compose([
         transforms.ToPILImage(), 
@@ -31,6 +52,7 @@ def _rts(config):
 hs = {
     "linfinity": _linfinity, 
     "rotation": _rotation, 
+    "pair_rotation": _pair_rotation,
     "rts": _rts, 
     "dataloader": lambda config: (lambda x: x[2]),
     "none": lambda config: (lambda x: x[0])

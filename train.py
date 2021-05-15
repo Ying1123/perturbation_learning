@@ -38,7 +38,7 @@ def save_chkpt(model, optimizer, epoch, val_loss, name, dp):
     if dp: 
         model.dataparallel()
 
-def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, loader, h, mode=TRAIN_MODE): 
+def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, loader, h, output_dir = None, mode=TRAIN_MODE): 
     meters = utilities.MultiAverageMeter([
         "recon", "kl", "loss"
     ])
@@ -48,7 +48,10 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
         lr = lr_schedule(epoch_idx)
         optimizer.param_groups[0].update(lr=lr)
 
+        data = torch.cat([data, data], dim=0).unsqueeze(1)
         hdata = h(batch)
+        print(data.shape)
+        print(hdata.shape)
         data = data.to(config.device)
         hdata = hdata.to(config.device)
 
@@ -85,6 +88,7 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
                                     data[:n],
                                     hdata[:n],
                                     recon_hbatch.view(*hdata.size())[:n]])
+            print(output_dir)
             save_image(hcomparison.cpu(),
                      os.path.join(output_dir, 'images', f'hreconstruction_{epoch}.png'), nrow=n)
 
@@ -153,13 +157,13 @@ def train(config, output_dir):
     for epoch in range(start_epoch, config.training.epochs): 
         # Training
         model.train()
-        loop(*args, epoch, train_loader, h_train, mode=TRAIN_MODE)
+        loop(*args, epoch, train_loader, h_train, output_dir=output_dir, mode=TRAIN_MODE)
 
         # Testing
         model.eval()
         with torch.no_grad():
-            val_meters = loop(*args, epoch, val_loader, h_train, mode=VAL_MODE)
-            test_meters = loop(*args, epoch, test_loader, h_test, mode=TEST_MODE)
+            val_meters = loop(*args, epoch, val_loader, h_train, output_dir=output_dir, mode=VAL_MODE)
+            test_meters = loop(*args, epoch, test_loader, h_test, output_dir=output_dir, mode=TEST_MODE)
 
             val_loss = val_meters['loss']
             if config.training.checkpoint_interval != "skip": 
