@@ -48,10 +48,11 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
         lr = lr_schedule(epoch_idx)
         optimizer.param_groups[0].update(lr=lr)
 
-        data = torch.cat([data, data], dim=0).unsqueeze(1)
+#         print(data.shape)
+        data = torch.cat([data, data], dim=0)
+#         print(data.shape)
         hdata = h(batch)
-        print(data.shape)
-        print(hdata.shape)
+#         print(hdata.shape)
         data = data.to(config.device)
         hdata = hdata.to(config.device)
 
@@ -89,6 +90,7 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
                                     hdata[:n],
                                     recon_hbatch.view(*hdata.size())[:n]])
             print(output_dir)
+            print(hcomparison.shape)
             save_image(hcomparison.cpu(),
                      os.path.join(output_dir, 'images', f'hreconstruction_{epoch}.png'), nrow=n)
 

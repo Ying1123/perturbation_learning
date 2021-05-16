@@ -24,19 +24,19 @@ def pair_rotation(x, config):
     degree = (np.random.rand() - 0.5) * (config.degree * 2)
     t = transforms.Compose([
         transforms.ToPILImage(), 
-        TF.rotate(degree), 
+        transforms.RandomRotation(degrees=(degree - 1e-5, degree), fill=(0,)),
+#         TF.rotate(degree), 
         transforms.ToTensor()
         ])
     t2 = transforms.Compose([
         transforms.ToPILImage(), 
-        TF.rotate(degree * 2.), 
+        transforms.RandomRotation(degrees=(degree * 2. - 1e-5, degree * 2), fill=(0,)),
+#         TF.rotate(degree * 2.), 
         transforms.ToTensor()
         ])
     part1 = torch.cat([t(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
     part2 = torch.cat([t2(x[i]) for i in range(x.size(0))], dim=0).unsqueeze(1) 
-    res = torch.cat([part1, part2], dim=0).unsqueeze(1)
-    print("part1: ", part1.shape)
-    print("res: ", res.shape)
+    res = torch.cat([part1, part2], dim=0)
     return res
 def _pair_rotation(config):
     return lambda x: pair_rotation(x[0], config)
