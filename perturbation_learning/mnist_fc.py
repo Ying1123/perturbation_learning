@@ -9,8 +9,8 @@ class BaseEncoder(nn.Module):
         super(BaseEncoder, self).__init__()
 
         self.fc1 = nn.Linear(input_sz, 784)
-        self.fc21 = nn.Linear(784, 784)
-        self.fc22 = nn.Linear(784, 784)
+        self.fc21 = nn.Linear(784, 1)
+        self.fc22 = nn.Linear(784, 1)
 
     def forward(self, x): 
         x = x.view(x.size(0), -1)
@@ -32,7 +32,7 @@ class Recognition(BaseEncoder):
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-        self.fc3 = nn.Linear(784*2, 784)
+        self.fc3 = nn.Linear(784+1, 784)
         self.fc4 = nn.Linear(784, 784)
 
     def forward(self, x, z): 
