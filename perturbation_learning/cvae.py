@@ -122,8 +122,10 @@ def vae_loss(hx, recon_hx, prior_params, recog_params, beta=1, reduction='sum', 
     KLD = KL(*kl_args)
     
     # calculate linear cost sample number 2k ( mu(2i+1) - 2 mu(2i) )
-    linear_cost = torch.abs(2 * mu[:int(bs/2)] - mu[int(bs/2):]).sum() * 1000
-    print("reconstruct: {}, kl: {} linear cost: {}".format(neg_ll.sum(), (KLD*beta).sum(), linear_cost))
+    #linear_cost = torch.abs(2 * mu[:int(bs/2)] - mu[int(bs/2):]).sum() * 1000
+    linear_cost = torch.abs(2 * (mu[:int(bs/2)] - mu_prior[:int(bs/2)]) 
+                                 - (mu[int(bs/2):] - mu_prior[int(bs/2):])).sum()
+    #print("reconstruct: {}, kl: {} linear cost: {}".format(neg_ll.sum(), (KLD*beta).sum(), linear_cost))
 
     # transformation log likelihood
     if reduction =='sum':
@@ -136,3 +138,4 @@ def vae_loss(hx, recon_hx, prior_params, recog_params, beta=1, reduction='sum', 
         return neg_ll, (KLD*beta)
     else:
         raise ValueError
+
