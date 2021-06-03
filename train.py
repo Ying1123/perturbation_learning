@@ -35,6 +35,7 @@ def save_chkpt(model, optimizer, epoch, val_loss, name, dp):
         "epoch": epoch,
         "val_loss": val_loss
     }, name)
+    
     if dp: 
         model.dataparallel()
 
@@ -61,7 +62,6 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
             optimizer.zero_grad()
         else: 
             beta = beta_schedule(config.training.epochs)
-
         output = model(data, hdata)
         recon_loss, kl_loss = cvae.vae_loss(hdata, *output, beta=beta,
                              distribution=config.model.output_distribution)
@@ -91,6 +91,7 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
                                     recon_hbatch.view(*hdata.size())[:n]])
             print(output_dir)
             print(hcomparison.shape)
+            
             save_image(hcomparison.cpu(),
                      os.path.join(output_dir, 'images', f'hreconstruction_{epoch}.png'), nrow=n)
 
@@ -108,6 +109,8 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
     logger.info('====> {} set loss: {} beta {:.4f} lr {:.8f}'.format(
           mode.capitalize().ljust(6), str(meters), beta, lr))
     return meters
+
+
 
     
 def train(config, output_dir):
@@ -161,6 +164,14 @@ def train(config, output_dir):
         model.train()
         loop(*args, epoch, train_loader, h_train, output_dir=output_dir, mode=TRAIN_MODE)
 
+        # Input to the model
+        print("saving model...")
+        raw_imgs, _ = next(iter(train_loader))
+        #raw_imgs = raw_imgs.cuda()
+        save_onnx_prior(model.prior, raw_imgs, os.path.join(output_dir, 'prior.onnx'))
+        zz = torch.randn(config.training.batch_size, 1, requires_grad=True)
+        save_onnx_generator(model.generator, (raw_imgs, zz), os.path.join(output_dir, 'generator.onnx'))
+        
         # Testing
         model.eval()
         with torch.no_grad():
@@ -184,6 +195,35 @@ def train(config, output_dir):
                            os.path.join(output_dir, 'checkpoints', 'checkpoint_latest.pth'), 
                            config.dataparallel)   
 
+def save_onnx_prior(module, inputs, fname):
+    torch.onnx.export(
+        module,                                     # model being run
+        inputs,                                     # model input (or a tuple for multiple inputs)
+        fname,                                      # where to save the model (can be a file or file-like object)
+        export_params=True,                         # store the trained parameter weights inside the model file
+        opset_version=10,                           # the ONNX version to export the model to
+        do_constant_folding=True,                   # whether to execute constant folding for optimization
+        input_names = ['input'],                    # the model's input names
+        output_names = ['mean', 'logVar'],                  # the model's output names
+        dynamic_axes={'input' : {0 : 'batch_size'}, # variable lenght axes
+                      'mean': {0:'batch_size'}, 
+                      'logVar': {0:'batch_size'}})
+
+def save_onnx_generator(module, inputs, fname):
+    torch.onnx.export(
+        module,                                     # model being run
+        inputs,                                     # model input (or a tuple for multiple inputs)
+        fname,                                      # where to save the model (can be a file or file-like object)
+        export_params=True,                         # store the trained parameter weights inside the model file
+        opset_version=10,                           # the ONNX version to export the model to
+        do_constant_folding=True,                   # whether to execute constant folding for optimization
+        input_names = ['image', "z"],                    # the model's input names
+        output_names = ['pimage'],                  # the model's output names
+        dynamic_axes={'image' : {0 : 'batch_size'}, # variable lenght axes
+                      'z': {0:'batch_size'}, 
+                      'pimage': {0:'batch_size'}})
+
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
                         description='Train script options',
