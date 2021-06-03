@@ -20,8 +20,8 @@ def _rotation(config):
     return lambda x: rotation(x[0],config)
 
 def pair_rotation(x, config):
-    np.random.seed(0)
     degree = (np.random.rand() - 0.5) * (config.degree * 2)
+    #print("degree: ", degree)
     t = transforms.Compose([
         transforms.ToPILImage(), 
         transforms.RandomRotation(degrees=(degree - 1e-5, degree), fill=(0,)),
@@ -39,6 +39,7 @@ def pair_rotation(x, config):
     res = torch.cat([part1, part2], dim=0)
     return res
 def _pair_rotation(config):
+    np.random.seed(0)
     return lambda x: pair_rotation(x[0], config)
 
 def rts(x, config): 

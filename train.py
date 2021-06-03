@@ -63,7 +63,7 @@ def loop(config, model, optimizer, lr_schedule, beta_schedule, logger, epoch, lo
         else: 
             beta = beta_schedule(config.training.epochs)
         output = model(data, hdata)
-        recon_loss, kl_loss = cvae.vae_loss(hdata, *output, beta=beta,
+        recon_loss, kl_loss = cvae.vae_loss(hdata, *output, beta=beta, reduction='complex', 
                              distribution=config.model.output_distribution)
 
         loss = (recon_loss + kl_loss)
@@ -164,14 +164,7 @@ def train(config, output_dir):
         model.train()
         loop(*args, epoch, train_loader, h_train, output_dir=output_dir, mode=TRAIN_MODE)
 
-        # Input to the model
-        print("saving model...")
-        raw_imgs, _ = next(iter(train_loader))
-        #raw_imgs = raw_imgs.cuda()
-        save_onnx_prior(model.prior, raw_imgs, os.path.join(output_dir, 'prior.onnx'))
-        zz = torch.randn(config.training.batch_size, 1, requires_grad=True)
-        save_onnx_generator(model.generator, (raw_imgs, zz), os.path.join(output_dir, 'generator.onnx'))
-        
+
         # Testing
         model.eval()
         with torch.no_grad():
@@ -194,7 +187,15 @@ def train(config, output_dir):
                 save_chkpt(model, optimizer, epoch, val_loss, 
                            os.path.join(output_dir, 'checkpoints', 'checkpoint_latest.pth'), 
                            config.dataparallel)   
-
+    # Input to the model
+    print("saving model...")
+    raw_imgs, _ = next(iter(train_loader))
+    raw_imgs = raw_imgs.cuda()
+    save_onnx_prior(model.prior, raw_imgs, os.path.join(output_dir, 'prior.onnx'))
+    zz = model.reparameterize(model.prior(raw_imgs))
+    #zz.to(config.device)
+    save_onnx_generator(model.generator, (raw_imgs, zz), os.path.join(output_dir, 'generator.onnx'))
+    
 def save_onnx_prior(module, inputs, fname):
     torch.onnx.export(
         module,                                     # model being run
